@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Trafico Platform - Demo</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+  </head>
+  <body>
+    <h1>Trafico Platform - Compra créditos (demo)</h1>
+    <div>
+      <label>Tu userId (ej: copia id desde DB): <input id="userId" /></label>
+    </div>
+    <div>
+      <label>Monto USD: <input id="amount" value="1" /></label>
+    </div>
+    <div id="paypal-button-container"></div>
+
+    <script>
+      // Debes reemplazar CLIENT_ID por tu PayPal client id (sandbox o live)
+      const PAYPAL_CLIENT_ID = 'REPLACE_WITH_CLIENT_ID';
+      const script = document.createElement('script');
+      script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD`;
+      script.onload = init;
+      document.head.appendChild(script);
+
+      function init(){
+        paypal.Buttons({
+          createOrder: function(data, actions) {
+            const userId = document.getElementById('userId').value;
+            const amount = document.getElementById('amount').value;
+            return fetch('/api/payments/create-order', {
+              method: 'post',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({ amount, currency:'USD', userId })
+            }).then(res => res.json()).then(data => data.orderID);
+          },
+          onApprove: function(data, actions) {
+            // Capture on server for reliability
+            const userId = document.getElementById('userId').value;
+            return fetch('/api/payments/capture-order', {
+              method: 'post',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({ orderID: data.orderID, userId })
+            }).then(res => res.json()).then(resJson=>{
+              alert('Pago procesado. Créditos acreditados: ' + (resJson.credits || 'pendiente'));
+            });
+          }
+        }).render('#paypal-button-container');
+      }
+    </script>
+  </body>
+</html>
